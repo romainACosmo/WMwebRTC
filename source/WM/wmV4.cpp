@@ -134,7 +134,9 @@ void exV4(Mat input, double wm[], int len){
     for (int j = 0; j < yFloat.rows; j += 32){
       Mat macro_blk = yFloat(Rect(i+8, j+8, 16, 16));
       // double tmp = cv::sum(blk)[0];
-      wm[i/32*yFloat.cols+j/32] += cv::sum(macro_blk)[0];
+      // cout << i/32*yFloat.cols/32+j/32 << endl;
+
+      wm[i/32*yFloat.cols/32+j/32] += cv::sum(macro_blk)[0];
 
       // for (int x = 0; x < yFloat.cols; x+=8){
       //   for (int y = 0; y < yFloat.rows; y+=8){
@@ -167,15 +169,17 @@ void exV4(Mat input, double wm[], int len){
     }
   }
 
-
-
-
-
-
-
-
   // print the execution time
   chrono::high_resolution_clock::time_point t2 = chrono::high_resolution_clock::now();
   chrono::duration<double> time_span = chrono::duration_cast<chrono::duration<double>>(t2 - t1);
   cout << time_span.count() << ",";
 }
+
+// void exV4Wrapper(Mat frame0, Mat frame1, Mat frame3, Mat frame4, double wm[], int len){
+//   double wm_tmp01[];
+//   double wm_tmp34[];
+//   exV4(frame0, wm_tmp, len);
+//   exV4(frame1, wm_tmp, len);
+//   exV4(frame3, wm_tmp, len);
+//   exV4(frame4, wm_tmp, len);
+// }

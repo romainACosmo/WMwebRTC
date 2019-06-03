@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include <opencv2/opencv.hpp>
-#include "helpers.cpp"
-#include "wmV1.cpp"
-#include "wmV2.cpp"
-#include "wmV3.cpp"
-#include "studyDCT.cpp"
+#include "../helpers.cpp"
+#include "../WM/wmV1.cpp"
+#include "../WM/wmV2.cpp"
+#include "../WM/wmV3.cpp"
+#include "../WM/wmV4.cpp"
+#include "../WM/studyDCT.cpp"
 
 #define LENGTH 512 // 16384
 #define NB_BLOCK_SELECTED 512
@@ -31,7 +32,7 @@ int main(int argc, char** argv )
   // ss << "figures/version" << 1 << "_alpha" << alpha <<".jpg";
   //
   // Mat src = imread(ss.str(), 1), res, res2;
-  Mat src2 = imread("lena.jpeg", 1), res, res2;
+  Mat src2 = imread("../../lena.jpeg", 1), res, res2;
     if ( !src2.data )
     {
         printf("No image data \n");
@@ -49,12 +50,16 @@ int main(int argc, char** argv )
     int wmInt[LENGTH] = {0};
     str2Array(wmStr2, LENGTH, wmInt);
 
-    std::cout << "Alpha,Extraction Time,PSNR,Hamming distance" << std::endl;
+    std::cout << "Alpha,Extraction Time,Hamming distance" << std::endl;
+
+    int wmRes[LENGTH] = {0};
+    double wmResA[256] = {0.0};
+    double wmResB[256] = {0.0};
 
     int count = 0;
     while(count < 5){
       std::stringstream ss;
-      ss << "figures/version" << version << "/zalpha8_" << count <<".jpg";
+      ss << "../../figures/version" << version << "/zalpha8_" << count <<".jpg";
       // std::cout << ss.str();
       Mat src = imread(ss.str(), 1), res, res2;
       Mat src2 = imread("lena.jpeg", 1);
@@ -66,9 +71,7 @@ int main(int argc, char** argv )
 
         res = Mat::zeros(src.size(), CV_8UC3);
 
-      int wmRes[LENGTH] = {0};
-      double wmResA[256] = {0.0};
-      double wmResB[256] = {0.0};
+
       std::cout << count << ",";
 
       switch (version) {
@@ -82,20 +85,24 @@ int main(int argc, char** argv )
           exV3(src, wmRes, LENGTH);
           break;
         case 4:
-          if(count != 2)
+          if(count != 2){
             exV4(src, count < 2 ? wmResA : wmResB, LENGTH);
+          }
           break;
         default:
         exV1(src, wmRes, LENGTH);
           break;
       }
 
-      int resXor[LENGTH] = {0};
-      myXor(wmInt, wmRes, LENGTH, resXor);
-      // printArray(resXor, LENGTH);
 
-      std::cout << getPSNR(src, src2) << "," << count1(resXor,LENGTH) << std::endl;
       count+=1;
-    // }
+    }
+    for(int i = 0; i < 256; ++i)
+      wmRes[i] = wmResA[i] > wmResB[i] ? 1 : 0;
+
+    int resXor[LENGTH] = {0};
+    myXor(wmInt, wmRes, LENGTH/2, resXor);
+
+    std::cout << count1(resXor,LENGTH/2) << std::endl;
     return 0;
 }

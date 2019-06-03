@@ -1,7 +1,11 @@
 #include <stdio.h>
 #include <opencv2/opencv.hpp>
-#include "helpers.cpp"
-#include "wmV1.cpp"
+#include "../helpers.cpp"
+#include "../WM/wmV1.cpp"
+#include "../WM/wmV2.cpp"
+#include "../WM/wmV3.cpp"
+#include "../WM/wmV4.cpp"
+#include "../WM/studyDCT.cpp"
 #define LENGTH 512
 
 int main(int argc, char** argv )

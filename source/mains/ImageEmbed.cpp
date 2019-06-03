@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <opencv2/opencv.hpp>
-#include "helpers.cpp"
-#include "wmV1.cpp"
-#include "wmV2.cpp"
-#include "wmV3.cpp"
-#include "wmV4.cpp"
-#include "studyDCT.cpp"
+#include "../helpers.cpp"
+#include "../WM/wmV1.cpp"
+#include "../WM/wmV2.cpp"
+#include "../WM/wmV3.cpp"
+#include "../WM/wmV4.cpp"
+#include "../WM/studyDCT.cpp"
 
 #define LENGTH 512 // 16384
 #define NB_BLOCK_SELECTED 512
@@ -21,8 +21,8 @@ g++ $(pkg-config --cflags --libs opencv) -std=c++11  ImageEmbed.cpp -o ImageEmbe
 int main(int argc, char** argv )
 {
 
-    Mat src = imread("lena.jpeg", 1), res, res2;
-    Mat src2 = imread("IMG_2791.jpeg", 1);
+    Mat src = imread("../../lena.jpeg", 1), res, res2;
+    Mat src2 = imread("../../IMG_2791.jpeg", 1);
     if ( !src.data )
     {
         printf("No image data \n");
@@ -101,7 +101,7 @@ int main(int argc, char** argv )
 
       std::cout << getPSNR(src, res) << std::endl;
       std::stringstream ss;
-      ss << "figures/version" << version << "/zalpha8_" << count <<".jpg";
+      ss << "../../figures/version" << version << "/zalpha8_" << count <<".jpg";
       imwrite(ss.str(), res);
       count+=1;
     }
