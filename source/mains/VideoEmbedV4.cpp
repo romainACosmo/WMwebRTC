@@ -7,13 +7,13 @@
 #include "../WM/wmV4.cpp"
 #include "../WM/studyDCT.cpp"
 
-#define LENGTH 512 // 16384
+#define LENGTH 256 // 512 // 16384
 using namespace cv;
 using namespace std;
 
 /**
 
-g++ $(pkg-config --cflags --libs opencv) -std=c++11  main0.cpp -o main0
+g++ $(pkg-config --cflags --libs opencv) -std=c++11  VideoEmbedV4.cpp -o VideoEmbedV4
 
 **/
 
@@ -37,7 +37,7 @@ int main(int argc, char** argv )
 
     VideoCapture cap("../../SampleVideo_1280x720_2mb.mp4");
     double fps = cap.get(CAP_PROP_FPS);
-    VideoWriter video("../../figures/outcpp.mp4", 0, fps, Size(1280,720)); //VideoWriter::fourcc('B','A','8','1')
+    VideoWriter video("../../figures/outcpp.avi", VideoWriter::fourcc('M','J','P','G'), fps, Size(1280,720));
     if(!cap.isOpened()){
       cout << "Error opening video stream or file" << endl;
       return -1;
@@ -45,31 +45,39 @@ int main(int argc, char** argv )
 
     std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
     int frameCount = 0;
+    bool done = false;
 
-
-    while(1){
+    while(!done){
         // Capture frame-by-frame
-        Mat frame;
-        cap >> frame;
+        Mat frame0, frame1, frame2;
+        for(int i = 0; i < 3; ++i){
+          cap >> frame0;
+          cap >> frame1;
+          cap >> frame2;
 
-        // If the frame is empty, break immediately
-        if (frame.empty())
-          break;
-        ++frameCount;
+          if (frame0.empty() || frame1.empty() || frame2.empty()){
+            done = true;
+            break;
+          }
+          frameCount += 3;
 
-        Mat res = Mat::zeros(frame.size(), CV_8UC3);
+          Mat res0 = Mat::zeros(frame0.size(), CV_8UC3);
+          Mat res1 = Mat::zeros(frame1.size(), CV_8UC3);
+          wmV4(frame0, i == 0 ? wmInt : buffer, LENGTH, res0, alpha);
+          wmV4(frame1, i == 0 ? wmInt : buffer, LENGTH, res1, alpha);
 
-        wmV1(frame, frameCount%2 == 0 ? wmInt : buffer, LENGTH, res, alpha); // 0.00356083086s latency
-        // wmV3(frame, wmInt, LENGTH, res); //
+          imshow( "Frame", res0);
+          video.write(res0);
+          imshow( "Frame", res1);
+          video.write(res1);
+          imshow( "Frame", frame2);
+          video.write(frame2);
 
-
-        // Display the resulting frame
-        imshow( "Frame", res);
-        video.write(res);
-        // Press  ESC on keyboard to exit
-        char c = (char)waitKey(25);
-        if(c == 27)
-          break;
+          // Press  ESC on keyboard to exit
+          char c = (char)waitKey(25);
+          if(c == 27)
+            break;
+        }
       }
       // print the execution time
       std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
@@ -85,34 +93,4 @@ int main(int argc, char** argv )
       destroyAllWindows();
 
       return 0;
-    //
-    //
-    // Mat src = imread("landscape.jpeg", 1), res;
-    // if ( !src.data )
-    // {
-    //     printf("No image data \n");
-    //     return -1;
-    // }
-    //
-    // res = Mat::zeros(src.size(), CV_8UC3);
-    //
-    // // length = 512
-    //
-    // int wmInt[LENGTH] = {0};
-    // str2Array(wmStr2, LENGTH, wmInt);
-    // // wmV1(src, wmInt, LENGTH, res);
-    // wmV3(src, wmInt, LENGTH, res);
-    //
-    // std::cout << "PSNR: " << getPSNR(src, res) << std::endl;
-    // int wmRes[LENGTH] = {0};
-    //
-    // imshow("full watermarked image", res);
-    // waitKey(0);
-
-    // exV1(res, wmRes, LENGTH);
-    // exV2(res, wmRes, LENGTH);
-    // int resXor[LENGTH] = {0};
-    // myXor(wmInt, wmRes, LENGTH, resXor);
-    // std::cout << "Hamming distance: "<< count1(resXor,LENGTH) << std::endl;
-    // return 0;
 }

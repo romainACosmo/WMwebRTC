@@ -50,11 +50,11 @@ void wmV4(Mat input, int wm[], int wmLength, Mat output, double alpha) // consid
   Mat yFloat, jnd;
   yuv[0].convertTo(yFloat, CV_32FC1);
   jnd = Mat::zeros(Size(yFloat.cols/8, yFloat.rows/8), CV_32FC1);
+  // cout << yFloat.cols << " x " << yFloat.rows << endl;
 
   int count = 0;
-  for (int i = 0; i < yFloat.cols; i += 32){
-    for (int j = 0; j < yFloat.rows; j += 32){
-
+  for (int i = 0; i < yFloat.cols - 31; i += 32){
+    for (int j = 0; j < yFloat.rows - 31 && count < wmLength; j += 32){
       Mat macro_blk = yFloat(Rect(i, j, 32, 32));
       Mat jnd_tmp = jnd(Rect(i/8, j/8, 32/8, 32/8)); // 8 as 1 coef computed for each 8x8 blk => only the DC coef
       double c = 0;
