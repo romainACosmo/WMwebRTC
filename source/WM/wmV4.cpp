@@ -128,15 +128,17 @@ void exV4(Mat input, double wm[], int len){
   // convert the Y channel to be compatible with the opencv dct function input type
   Mat yFloat;
   yuv[0].convertTo(yFloat, CV_32FC1);
+  int count = 0;
 
   // __TODO__
-  for (int i = 0; i < yFloat.cols; i += 32){
-    for (int j = 0; j < yFloat.rows; j += 32){
+  for (int i = 0; i < yFloat.cols - 31; i += 32){
+    for (int j = 0; j < yFloat.rows - 31 &&  count < len; j += 32){
       Mat macro_blk = yFloat(Rect(i+8, j+8, 16, 16));
       // double tmp = cv::sum(blk)[0];
-      // cout << i/32*yFloat.cols/32+j/32 << endl;
-
-      wm[i/32*yFloat.cols/32+j/32] += cv::sum(macro_blk)[0];
+      // cout << endl << 20 <<endl;
+      // cout << count << endl;
+      wm[count] += cv::sum(macro_blk)[0]/(16*16);
+      ++count;
 
       // for (int x = 0; x < yFloat.cols; x+=8){
       //   for (int y = 0; y < yFloat.rows; y+=8){
@@ -164,7 +166,6 @@ void exV4(Mat input, double wm[], int len){
           // wm[i/32*yFloat.cols+j/32] += jnd_tmp.at<float>(x,y)*(2*wm[count]-1)*alpha/8;
       //   }
       // }
-
 
     }
   }
