@@ -41,7 +41,7 @@ void wmV4(Mat input, int wm[], int wmLength, Mat output, double alpha) // consid
 
   Mat yuvAll;
   Mat yuv[3];
-
+  cout << endl << "new frame" <<endl;
   // convert the image from bgr to yuv in separated channels
   cvtColor(input, yuvAll, COLOR_BGR2YCrCb);
   split(yuvAll, yuv);
@@ -53,8 +53,10 @@ void wmV4(Mat input, int wm[], int wmLength, Mat output, double alpha) // consid
   // cout << yFloat.cols << " x " << yFloat.rows << endl;
 
   int count = 0;
+
   for (int i = 0; i < yFloat.cols - 31; i += 32){
     for (int j = 0; j < yFloat.rows - 31 && count < wmLength; j += 32){
+      // cout << i << " - " << j << "=>" << count << endl;
       Mat macro_blk = yFloat(Rect(i, j, 32, 32));
       Mat jnd_tmp = jnd(Rect(i/8, j/8, 32/8, 32/8)); // 8 as 1 coef computed for each 8x8 blk => only the DC coef
       double c = 0;
@@ -76,24 +78,14 @@ void wmV4(Mat input, int wm[], int wmLength, Mat output, double alpha) // consid
           idct(blk, blk);
 
           blk += jnd_tmp.at<float>(x,y)*(2*wm[count]-1)*alpha/8;
-
-          // int maxBrightX = 0;
-          // int maxBrightY = 0;
-          // double maxBright = 0.0;
-          // for (int m = 0; m < 4; m += 4) {
-          //   for (int n = 0; n < 4; n += 4) {
-          //     double tmp = cv::sum(blk(Rect(m, n, 4, 4)))[0];
-          //     if(tmp >= maxBright){
-          //       maxBright = tmp;
-          //       maxBrightX = m;
-          //       maxBrightY = n;
-          //     }
-          //   }
-          // }
-          // Mat mini_blk = blk(Rect(maxBrightX, maxBrightY, 4, 4));
-          // mini_blk += jnd_tmp.at<float>(x,y)*(2*wm[count]-1)*alpha/8;
         }
       }
+      // if(j == 20*32 && i == 5*32){
+      //   cout << endl << "here: " << count << endl;
+      //   cout << (2*wm[count]-1) << endl;
+      //   cout << macro_blk << endl;
+      //   cout << jnd_tmp << endl;
+      // }
       ++count;
     }
   }
@@ -129,15 +121,23 @@ void exV4(Mat input, double wm[], int len){
   Mat yFloat;
   yuv[0].convertTo(yFloat, CV_32FC1);
   int count = 0;
+  // cout << yFloat.cols - 31 << " - " << yFloat.rows - 31<< endl;
 
   // __TODO__
   for (int i = 0; i < yFloat.cols - 31; i += 32){
     for (int j = 0; j < yFloat.rows - 31 &&  count < len; j += 32){
-      Mat macro_blk = yFloat(Rect(i+8, j+8, 16, 16));
+      // Mat macro_blk = yFloat(Rect(i+8, j+8, 16, 16));
+      Mat macro_blk = yFloat(Rect(i, j, 32, 32));
       // double tmp = cv::sum(blk)[0];
       // cout << endl << 20 <<endl;
       // cout << count << endl;
-      wm[count] += cv::sum(macro_blk)[0]/(16*16);
+      wm[count] += cv::sum(macro_blk)[0]/(32*32);
+      // if(j == 20*32 && i == 5*32){
+      //   cout << endl << "here: " << count << endl;
+      //   cout << macro_blk << endl;
+      //   cout << cv::sum(macro_blk)[0]/(16*16) << endl;
+      //
+      // }
       ++count;
 
       // for (int x = 0; x < yFloat.cols; x+=8){

@@ -12,7 +12,7 @@ using namespace cv;
 using namespace std;
 
 /**
-38 gop ?
+38 gop
 g++ $(pkg-config --cflags --libs opencv) -std=c++11  VideoExtractV4.cpp -o VideoExtractV4
 
 **/
@@ -21,6 +21,9 @@ int main(int argc, char** argv )
 {
   // length = 512
   const char wmStr2[] = "00110010001111000000100000011111100011111011000000110011111100010001101000101110000100000101110101010001000000010101100101111100100111100001001100100101111111100000000101001001111100101000000110001000000101010010001101101001110111000011110111101011011011111000111110010011100011110001011000001101011101110110100101101101011010011000110010001110110110001111001101011010000101101111011101100010011011110101010101001111111111011010101101011100111100000110011110000001101101101110010100100001010001000000001010001110";
+
+  int nb_blk = (1280/32)*(720/32);
+  int nb_replicate = nb_blk/LENGTH;
 
   int wmInt[LENGTH] = {0};
   int buffer[LENGTH] = {0};
@@ -41,8 +44,11 @@ int main(int argc, char** argv )
     int wmRes[LENGTH] = {0};
 
     while(!done){
-        double wmResA[LENGTH] = {0.0};
-        double wmResB[LENGTH] = {0.0};
+        double wmResA[LENGTH*nb_replicate];
+        double wmResB[LENGTH*nb_replicate];
+        memset(wmResA, 0.0, LENGTH*nb_replicate*sizeof(double));
+        memset(wmResB, 0.0, LENGTH*nb_replicate*sizeof(double));
+
         // Capture frame-by-frame
         Mat frame0, frame1, frame2;
         for(int i = 0; i < 2; ++i){
@@ -55,26 +61,20 @@ int main(int argc, char** argv )
             break;
           }
           frameCount += 3;
-          // printf("%d\n", i);
-          exV4(frame0, i == 0 ? wmResA : wmResB, LENGTH);
-          // cout << endl;
-          // printArray(wmResA, LENGTH);
-          // cout << endl;
-          // printArray(wmResB, LENGTH);
-          exV4(frame1, i == 0 ? wmResA : wmResB, LENGTH);
-          // cout << endl;
-          // printArray(wmResA, LENGTH);
-          // cout << endl;
-          // printArray(wmResB, LENGTH);
-          // waitKey(32);
 
+          exV4(frame0, i == 0 ? wmResA : wmResB, LENGTH*nb_replicate);
+          exV4(frame1, i == 0 ? wmResA : wmResB, LENGTH*nb_replicate);
         }
-        cout << "printing wm res for frames " << frameCount << endl;
-        for(int i = 0; i < LENGTH; ++i){
+        // cout << "printing wm res for frames " << frameCount << endl;
 
-          // if(wmResA[i] - wmResB[i] + /*3rd condition*/)
-          // cout << (wmResA[i] > wmResB[i] ? 1 : 0) << ", ";
-          wmRes[i] += wmResA[i] > wmResB[i] ? 1 : 0;
+        for(int i = 0; i < LENGTH; ++i){
+          double tmp1 = 0.0;
+          double tmp2 = 0.0;
+          for (int k = 0; k < nb_replicate; k++) {
+            tmp1 += wmResA[i+k*LENGTH];
+            tmp2 += wmResB[i+k*LENGTH];
+          }
+          wmRes[i] += tmp1 > tmp2 ? 1 : 0;
         }
 
         int resXor[LENGTH] = {0};
@@ -85,6 +85,7 @@ int main(int argc, char** argv )
 
         // std::cout << endl << count1(resXor,LENGTH) << endl;
       }
+      cout << endl;
       printArray(wmRes, LENGTH);
 
       for(int i = 0; i < LENGTH; ++i)
@@ -93,7 +94,18 @@ int main(int argc, char** argv )
       myXor(wmInt, wmRes, LENGTH, resXorFinal);
 
       cout << "done, Hamming distance = " << count1(resXorFinal,LENGTH) <<endl;
-      printArray(wmRes, LENGTH);
+      for (size_t i = 0; i < LENGTH; i++) {
+        if(resXorFinal[i] == 1){
+          cout << resXorFinal[i] << endl;
+          cout << i << ": " << (i*32%1280)/32 << " - " << i*32/1280 << endl;
+          cout << wmRes[i] << endl;
+          cout << wmInt[i] << endl << endl;
+
+        }
+      }
+      // printArray(wmRes, LENGTH);
+      // cout << endl;
+      // printArray(resXorFinal, LENGTH);
 
     // while(1){
     //     Mat frame;
