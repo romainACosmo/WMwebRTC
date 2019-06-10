@@ -30,7 +30,7 @@ int main(int argc, char** argv )
   for (size_t i = 0; i < LENGTH; i++)
     buffer[i] = 1-wmInt[i];
 
-    VideoCapture cap("../../figures/outcppV5.mkv");
+    VideoCapture cap("../../figures/outcppV5.avi");
     if(!cap.isOpened()){
       cout << "Error opening video stream or file" << endl;
       return -1;
@@ -87,14 +87,14 @@ int main(int argc, char** argv )
       myXor(wmInt, wmRes, LENGTH, resXorFinal);
       // printArray(wmRes, LENGTH);
 
-      for (size_t i = 0; i < LENGTH; i++) {
-        if(resXorFinal[i] == 1){
-          cout << resXorFinal[i] << endl;
-          cout << i << ": " << (i*32%1280)/32 << " - " << i*32/1280 << endl;
-          cout << wmRes[i] << endl;
-          cout << wmInt[i] << endl << endl;
-        }
-      }
+      // for (size_t i = 0; i < LENGTH; i++) {
+      //   if(resXorFinal[i] == 1){
+      //     cout << resXorFinal[i] << endl;
+      //     cout << i << ": " << (i*32%1280)/32 << " - " << i*32/1280 << endl;
+      //     cout << wmRes[i] << endl;
+      //     cout << wmInt[i] << endl << endl;
+      //   }
+      // }
 
       cout << "Hamming distance = " << count1(resXorFinal,LENGTH) <<endl;
 

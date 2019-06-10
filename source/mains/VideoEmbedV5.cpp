@@ -39,7 +39,7 @@ int main(int argc, char** argv )
 
     VideoCapture cap("../../SampleVideo_1280x720_2mb.mp4");
     double fps = cap.get(CAP_PROP_FPS);
-    VideoWriter video("../../figures/outcppV5.mkv", VideoWriter::fourcc('X','2','6','4'), fps, Size(1280,720));
+    VideoWriter video("../../figures/outcppV5.avi", VideoWriter::fourcc('M','J','P','G'), fps, Size(1280,720));
     // VideoWriter video("../../figures/outcpp.mkv", , fps, Size(1280,720));
     if(!cap.isOpened()){
       cout << "Error opening video stream or file" << endl;
@@ -50,7 +50,7 @@ int main(int argc, char** argv )
     int frameCount = 0;
     bool done = false;
 
-    while(!done){
+    while(!done && frameCount < 9){
         // Capture frame-by-frame
         Mat frame0, frame1, frame2;
         for(int i = 0; i < 2; ++i){
