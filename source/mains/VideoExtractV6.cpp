@@ -5,7 +5,7 @@
 #include "../WM/wmV2.cpp"
 #include "../WM/wmV3.cpp"
 #include "../WM/wmV4.cpp"
-#include "../WM/wmV5.cpp"
+#include "../WM/wmV6.cpp"
 #include "../WM/studyDCT.cpp"
 
 #define LENGTH 128
@@ -30,7 +30,8 @@ int main(int argc, char** argv )
   for (size_t i = 0; i < LENGTH; i++)
     buffer[i] = 1-wmInt[i];
 
-    VideoCapture cap("../../figures/outcppV5.avi");
+    VideoCapture cap("../../figures/captured.avi");
+    // VideoCapture cap("../../figures/outcppV6.mkv");
     if(!cap.isOpened()){
       cout << "Error opening video stream or file" << endl;
       return -1;
@@ -61,8 +62,8 @@ int main(int argc, char** argv )
           }
           frameCount += 3;
 
-          exV5(frame0, i == 0 ? wmResA : wmResB, LENGTH);
-          exV5(frame1, i == 0 ? wmResA : wmResB, LENGTH);
+          exV6(frame0, i == 0 ? wmResA : wmResB, LENGTH);
+          exV6(frame1, i == 0 ? wmResA : wmResB, LENGTH);
         }
         // cout << "printing wm res for frames " << frameCount << endl;
 
@@ -78,14 +79,14 @@ int main(int argc, char** argv )
 
         // std::cout << endl << count1(resXor,LENGTH) << endl;
       }
-      cout << endl;
-      // printArray(wmRes, LENGTH);
+      cout << endl << frameCount << endl;
+      printArray(wmRes, LENGTH);
 
       for(int i = 0; i < LENGTH; ++i)
-        wmRes[i] = wmRes[i] > 19 ? 1 : 0;
+        wmRes[i] = wmRes[i] > 28 ? 1 : 0; // 19 for whole video // 6 == GOP
       int resXorFinal[LENGTH] = {0};
       myXor(wmInt, wmRes, LENGTH, resXorFinal);
-      // printArray(wmRes, LENGTH);
+      printArray(wmRes, LENGTH);
 
       // for (size_t i = 0; i < LENGTH; i++) {
       //   if(resXorFinal[i] == 1){

@@ -5,7 +5,7 @@
 #include "../WM/wmV2.cpp"
 #include "../WM/wmV3.cpp"
 #include "../WM/wmV4.cpp"
-#include "../WM/wmV5.cpp"
+#include "../WM/wmV6.cpp"
 #include "../WM/studyDCT.cpp"
 
 #define LENGTH 128 // 512 // 16384
@@ -33,13 +33,31 @@ int main(int argc, char** argv )
     int wmInt[LENGTH] = {0};
     str2Array(wmStr2, LENGTH, wmInt);
 
-    int buffer[LENGTH];
-    for (size_t i = 0; i < LENGTH; i++)
-      buffer[i] = 1-wmInt[i];
+    // int buffer[LENGTH];
+    // for (size_t i = 0; i < LENGTH; i++)
+    //   buffer[i] = 1-wmInt[i];
+
+    int nb_blk = (1280/32)*(720/32);
+    int nb_replicate = nb_blk/LENGTH;
+    int wm_rep[nb_replicate*LENGTH];
+    int buffer[nb_replicate*LENGTH];
+    for(int i = 0; i < nb_replicate; ++i){
+      for (int j = 0; j < LENGTH; j++){
+        wm_rep[i*LENGTH+j] = wmInt[j];
+        buffer[i*LENGTH+j] = 1-wm_rep[i*LENGTH+j];
+      }
+    }
+
+    /*
+    Compatibility:
+    avi - mjpg
+    mkv - x264
+    mp4 - avc1
+    */
 
     VideoCapture cap("../../SampleVideo_1280x720_2mb.mp4");
     double fps = cap.get(CAP_PROP_FPS);
-    VideoWriter video("../../figures/outcppV5.avi", VideoWriter::fourcc('M','J','P','G'), fps, Size(1280,720));
+    VideoWriter video("../../figures/outcppV6.mp4", VideoWriter::fourcc('a','v','c','1'), fps, Size(1280,720));
     // VideoWriter video("../../figures/outcpp.mkv", , fps, Size(1280,720));
     if(!cap.isOpened()){
       cout << "Error opening video stream or file" << endl;
@@ -50,7 +68,7 @@ int main(int argc, char** argv )
     int frameCount = 0;
     bool done = false;
 
-    while(!done && frameCount < 9){
+    while(!done){ // && frameCount < 12
         // Capture frame-by-frame
         Mat frame0, frame1, frame2;
         for(int i = 0; i < 2; ++i){
@@ -67,8 +85,8 @@ int main(int argc, char** argv )
           Mat res0 = Mat::zeros(frame0.size(), CV_8UC3);
           Mat res1 = Mat::zeros(frame1.size(), CV_8UC3);
           // cout << wm_rep[130] << endl;
-          wmV5(frame0, i == 0 ? wmInt : buffer, LENGTH, res0, alpha);
-          wmV5(frame1, i == 0 ? wmInt : buffer, LENGTH, res1, alpha);
+          wmV6(frame0, i == 0 ? wm_rep : buffer, LENGTH*nb_replicate, res0, alpha);
+          wmV6(frame1, i == 0 ? wm_rep : buffer, LENGTH*nb_replicate, res1, alpha);
 
           // imshow( "Frame", res0);
           video.write(res0);
