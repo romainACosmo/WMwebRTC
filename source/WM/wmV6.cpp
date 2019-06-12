@@ -23,21 +23,19 @@ sum 2 first frames - 2 last frames > 0 ur < 0
 Problem:
 */
 
-void wmV6(Mat input, int wm[], int wmLength, Mat output, double alpha) // consider WM length == 512
+void wmV6(Mat input, int wm[], int wmLength, Mat output, double alpha)
 {
   // start the timer
   chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
 
+
   Mat bgr[3];
-  // cout << endl << "new frame" <<endl;
   // convert the image from bgr to bgr in separated channels
   split(input, bgr);
 
   // convert the Y channel to be compatible with the opencv dct function input type
   Mat bFloat, jnd;
   bgr[0].convertTo(bFloat, CV_32FC1);
-  jnd = Mat::zeros(Size(bFloat.cols/8, bFloat.rows/8), CV_32FC1);
-  // cout << bFloat.cols << " x " << bFloat.rows << endl;
 
   int count = 0;
 
@@ -45,34 +43,25 @@ void wmV6(Mat input, int wm[], int wmLength, Mat output, double alpha) // consid
     for (int j = 0; j < bFloat.rows - 31 && count < wmLength; j += 32){
       // cout << i << " - " << j << "=>" << count << endl;
       Mat macro_blk = bFloat(Rect(i, j, 32, 32));
-      Mat jnd_tmp = jnd(Rect(i/8, j/8, 32/8, 32/8)); // 8 as 1 coef computed for each 8x8 blk => only the DC coef
+      Mat copyDCT = macro_blk.clone();
       double c = 0;
 
-      for (int x = 0; x < macro_blk.cols; x += 8){
-        for (int y = 0; y < macro_blk.rows; y += 8){
-          Mat blk = macro_blk(Rect(x, y, 8, 8));
+      for (int x = 0; x < copyDCT.cols; x += 8){
+        for (int y = 0; y < copyDCT.rows; y += 8){
+          Mat blk = copyDCT(Rect(x, y, 8, 8));
           dct(blk, blk);
           c += blk.at<float>(0,0);
         }
       }
       c /= 16;
 
-      for (int x = 0; x < jnd_tmp.cols; ++x){
-        for (int y = 0; y < jnd_tmp.rows; ++y){
-          Mat blk = macro_blk(Rect(x*8, y*8, 8, 8)); // 8 as 1 coef computed for each 8x8 blk => only the DC coef
-
-          jnd_tmp.at<float>(x,y) = 1.4*pow(blk.at<float>(0,0)/c, LUMASKEXPO);
-          idct(blk, blk);
-
-          blk += jnd_tmp.at<float>(x,y)*(2*wm[count]-1)*alpha/8;
+      for (int x = 0; x < copyDCT.cols; x+=8){
+        for (int y = 0; y < copyDCT.rows; y+=8){
+          Mat blk = macro_blk(Rect(x, y, 8, 8)); // 8 as 1 coef computed for each 8x8 blk => only the DC coef
+          double tmp = 1.4*pow(copyDCT.at<float>(x,y)/c, LUMASKEXPO);
+          blk += tmp*(2*wm[count]-1)*alpha/8;
         }
       }
-      // if(j == 20*32 && i == 5*32){
-      //   cout << endl << "here: " << count << endl;
-      //   cout << (2*wm[count]-1) << endl;
-      //   cout << macro_blk << endl;
-      //   cout << jnd_tmp << endl;
-      // }
       ++count;
     }
   }
@@ -84,11 +73,15 @@ void wmV6(Mat input, int wm[], int wmLength, Mat output, double alpha) // consid
   channels.push_back(bgr[2]);
   merge(channels, output);
 
+
   // print the execution time
   chrono::high_resolution_clock::time_point t2 = chrono::high_resolution_clock::now();
   chrono::duration<double> time_span = chrono::duration_cast<chrono::duration<double>>(t2 - t1);
   cout << time_span.count() << ", PSNR: " << getPSNR(input, output) << endl;
-  // cout << time_span.count() << ",";
+
+  // Mat s1;
+  // absdiff(input, output, s1);
+  // cout << s1 << endl;
 }
 
 
@@ -106,52 +99,15 @@ void exV6(Mat input, double wm[], int len){
   Mat bFloat;
   bgr[0].convertTo(bFloat, CV_32FC1);
   int count = 0;
-  // cout << bFloat.cols - 31 << " - " << bFloat.rows - 31<< endl;
 
-  // __TODO__
   for (int i = 0; i < bFloat.cols - 31; i += 32){
     for (int j = 0; j < bFloat.rows - 31 &&  count < len; j += 32){
       // Mat macro_blk = bFloat(Rect(i+8, j+8, 16, 16));
       Mat macro_blk = bFloat(Rect(i+8, j+8, 16, 16));
       // double tmp = cv::sum(blk)[0];
-      // cout << endl << 20 <<endl;
-      // cout << count << endl;
+
       wm[count] += cv::sum(macro_blk)[0]/(16*16);
-      // if(j == 20*32 && i == 5*32){
-      //   cout << endl << "here: " << count << endl;
-      //   cout << macro_blk << endl;
-      //   cout << cv::sum(macro_blk)[0]/(16*16) << endl;
-      //
-      // }
       ++count;
-
-      // for (int x = 0; x < bFloat.cols; x+=8){
-      //   for (int y = 0; y < bFloat.rows; y+=8){
-      //     Mat blk = macro_blk(Rect(x, y, 8, 8));
-      //     double tmp = cv::sum(blk)[0];
-      //     wm[i/32*bFloat.cols+j/32] += cv::sum(blk)[0];
-
-
-
-          // int maxBrightX = 0;
-          // int maxBrightY = 0;
-          // double maxBright = 0.0;
-          // for (int m = 0; m < 4; m+=4){
-          //   for (int n = 0; n < 4; n+=4){
-          //     double tmp = cv::sum(blk(Rect(m, n, 4, 4)))[0];
-          //     if(tmp >= maxBright){
-          //       maxBright = tmp;
-          //       maxBrightX = m;
-          //       maxBrightY = n;
-          //     }
-          //     // wm[i/32*bFloat+j/32] += blk.at<float>(0,0);
-          //   }
-          // }
-          // Mat mini_blk = blk(Rect(maxBrightX, maxBrightY, 4, 4));
-          // wm[i/32*bFloat.cols+j/32] += jnd_tmp.at<float>(x,y)*(2*wm[count]-1)*alpha/8;
-      //   }
-      // }
-
     }
   }
 
@@ -159,8 +115,4 @@ void exV6(Mat input, double wm[], int len){
   chrono::high_resolution_clock::time_point t2 = chrono::high_resolution_clock::now();
   chrono::duration<double> time_span = chrono::duration_cast<chrono::duration<double>>(t2 - t1);
   cout << time_span.count() << ",";
-}
-
-void exLongV6(Mat input, double wm[], int len){
-  
 }

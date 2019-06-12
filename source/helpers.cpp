@@ -93,6 +93,7 @@ void str2Array(std::string wmStr, int length, int wmInt[]){
   for(int i = 0; i < length; ++i){
     wmInt[i] = wmStr[i] == '1' ? 1 : 0;
   }
+  // printArray(wmInt, length);
 }
 
 void myXor(int a[], int b[], int len, int res[]){
@@ -117,11 +118,15 @@ double getPSNR(const Mat& I1, const Mat& I2)
     s1 = s1.mul(s1);           // |I1 - I2|^2
 
     Scalar s = sum(s1);         // sum elements per channel
+    // std::cout << s1 << std::endl << std::endl << std::endl;
+
 
     double sse = s.val[0] + s.val[1] + s.val[2]; // sum channels
 
-    if( sse <= 1e-10) // for small values return zero
+    if( sse <= 1e-10){ // for small values return zero
+        // std::cout << "tooo small: " << sse << std::endl;
         return 0;
+      }
     else
     {
         double  mse =sse /(double)(I1.channels() * I1.total());

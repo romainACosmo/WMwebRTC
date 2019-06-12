@@ -30,8 +30,8 @@ int main(int argc, char** argv )
   for (size_t i = 0; i < LENGTH; i++)
     buffer[i] = 1-wmInt[i];
 
-    VideoCapture cap("../../figures/captured.avi");
-    // VideoCapture cap("../../figures/outcppV6.mkv");
+    // VideoCapture cap("../../figures/captured.avi");
+    VideoCapture cap("../../figures/outcppV6.avi");
     if(!cap.isOpened()){
       cout << "Error opening video stream or file" << endl;
       return -1;
@@ -65,7 +65,7 @@ int main(int argc, char** argv )
           exV6(frame0, i == 0 ? wmResA : wmResB, LENGTH);
           exV6(frame1, i == 0 ? wmResA : wmResB, LENGTH);
         }
-        // cout << "printing wm res for frames " << frameCount << endl;
+        cout << "printing wm res for frames " << frameCount << endl;
 
         for(int i = 0; i < LENGTH; ++i){
           wmRes[i] += wmResA[i] > wmResB[i] ? 1 : 0;
@@ -73,7 +73,7 @@ int main(int argc, char** argv )
 
         int resXor[LENGTH] = {0};
         // cout << endl;
-        // printArray(wmInt, LENGTH);
+        printArray(wmInt, LENGTH);
         // printArray(wmRes, LENGTH);
         myXor(wmInt, wmRes, LENGTH, resXor);
 
