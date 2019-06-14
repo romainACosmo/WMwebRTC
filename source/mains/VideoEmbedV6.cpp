@@ -88,6 +88,7 @@ int main(int argc, char** argv )
         int * emb;
         switch ((frameCount/GOP)%3) {
           case 0:
+          // first frame of the sequence: embed 0 
             // embed synSeq of 0s
             if(frameCount%GOP < 2)
               emb = &synSeq0[0];

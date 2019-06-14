@@ -114,5 +114,5 @@ void exV6(Mat input, double wm[], int len){
   // print the execution time
   chrono::high_resolution_clock::time_point t2 = chrono::high_resolution_clock::now();
   chrono::duration<double> time_span = chrono::duration_cast<chrono::duration<double>>(t2 - t1);
-  cout << time_span.count() << ",";
+  // cout << time_span.count() << ",";
 }

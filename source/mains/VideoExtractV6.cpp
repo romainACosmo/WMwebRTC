@@ -23,103 +23,81 @@ int main(int argc, char** argv )
   // length = 512
   const char wmStr2[] = "00110010001111000000100000011111100011111011000000110011111100010001101000101110000100000101110101010001000000010101100101111100100111100001001100100101111111100000000101001001111100101000000110001000000101010010001101101001110111000011110111101011011011111000111110010011100011110001011000001101011101110110100101101101011010011000110010001110110110001111001101011010000101101111011101100010011011110101010101001111111111011010101101011100111100000110011110000001101101101110010100100001010001000000001010001110";
 
-
   int wmInt[LENGTH] = {0};
   int buffer[LENGTH] = {0};
   str2Array(wmStr2, LENGTH, wmInt);
   for (size_t i = 0; i < LENGTH; i++)
     buffer[i] = 1-wmInt[i];
 
-    // VideoCapture cap("../../figures/captured.avi");
-    VideoCapture cap("../../figures/outcppV6.avi");
+    VideoCapture cap("../../figures/captured.avi");
+    // VideoCapture cap("../../figures/outcppV6.avi");
     if(!cap.isOpened()){
       cout << "Error opening video stream or file" << endl;
       return -1;
     }
 
-    std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
-    int frameCount = 0;
+    double fps = cap.get(CAP_PROP_FPS);
+    double embedding_fps = 25;
+    double fps_ratio = fps/embedding_fps;
+    double width = cap.get(CAP_PROP_FRAME_WIDTH);
+    double height = cap.get(CAP_PROP_FRAME_HEIGHT);
 
-    bool done = false;
-    int wmRes[LENGTH] = {0};
+    cout << fps << endl;
+
+    // initialization of syncronization sequences
+    int nb_blk = (width/32)*(height/32);
+    int nb_replicate = nb_blk/LENGTH;
+    int synSeq0[nb_replicate*LENGTH];
+    int synSeq1[nb_replicate*LENGTH];
+    for (size_t i = 0; i < nb_replicate*LENGTH; i++){
+      synSeq0[i] = 0;
+      synSeq1[i] = 1;
+    }
+
+    std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+    int frame_count_embed = 0, frame_count_received = 0;
+
+    bool done = false, sync = false;
+
 
     while(!done){
-        double wmResA[LENGTH];
-        double wmResB[LENGTH];
-        memset(wmResA, 0.0, LENGTH*sizeof(double));
-        memset(wmResB, 0.0, LENGTH*sizeof(double));
 
-        // Capture frame-by-frame
-        Mat frame0, frame1, frame2;
-        for(int i = 0; i < 2; ++i){
-          cap >> frame0;
-          cap >> frame1;
-          cap >> frame2;
+      double wmResA[nb_blk];
+      double wmResB[nb_blk];
 
-          if (frame0.empty() || frame1.empty() || frame2.empty()){
-            done = true;
+      done = true;
+
+      while (!sync){ // change frame rate
+        Mat frame;
+        for (size_t i = 0; i < 2; i++) {
+          frame = cap.read();
+          if (frame.empty())
             break;
-          }
-          frameCount += 3;
+          exV6(frame, wmResA, nb_blk);
 
-          exV6(frame0, i == 0 ? wmResA : wmResB, LENGTH);
-          exV6(frame1, i == 0 ? wmResA : wmResB, LENGTH);
         }
-        cout << "printing wm res for frames " << frameCount << endl;
+        frame = cap.read();
+        if (frame.empty())
+          break;
 
-        for(int i = 0; i < LENGTH; ++i){
-          wmRes[i] += wmResA[i] > wmResB[i] ? 1 : 0;
+        for (size_t i = 0; i < 2; i++) {
+          frame = cap.read();
+          if (frame.empty())
+            break;
+          exV6(frame, wmResA, nb_blk);
+
         }
+        frame = cap.read();
+        if (frame.empty())
+          break;
 
-        int resXor[LENGTH] = {0};
-        // cout << endl;
-        printArray(wmInt, LENGTH);
-        // printArray(wmRes, LENGTH);
-        myXor(wmInt, wmRes, LENGTH, resXor);
 
-        // std::cout << endl << count1(resXor,LENGTH) << endl;
+
+        cap.set(CAP_PROP_POS_FRAMES, 0);
       }
-      cout << endl << frameCount << endl;
-      printArray(wmRes, LENGTH);
 
-      for(int i = 0; i < LENGTH; ++i)
-        wmRes[i] = wmRes[i] > 28 ? 1 : 0; // 19 for whole video // 6 == GOP
-      int resXorFinal[LENGTH] = {0};
-      myXor(wmInt, wmRes, LENGTH, resXorFinal);
-      printArray(wmRes, LENGTH);
+      }
 
-      // for (size_t i = 0; i < LENGTH; i++) {
-      //   if(resXorFinal[i] == 1){
-      //     cout << resXorFinal[i] << endl;
-      //     cout << i << ": " << (i*32%1280)/32 << " - " << i*32/1280 << endl;
-      //     cout << wmRes[i] << endl;
-      //     cout << wmInt[i] << endl << endl;
-      //   }
-      // }
-
-      cout << "Hamming distance = " << count1(resXorFinal,LENGTH) <<endl;
-
-      // printArray(wmRes, LENGTH);
-      // cout << endl;
-      // printArray(resXorFinal, LENGTH);
-
-    // while(1){
-    //     Mat frame;
-    //     // Capture frame-by-frame
-    //     cap >> frame;
-    //     // If the frame is empty, break immediately
-    //     if (frame.empty())
-    //       break;
-    //     ++frameCount;
-    //
-    //     int wmRes[LENGTH] = {0};
-    //
-    //     exV1(frame, wmRes, LENGTH);
-    //     int resXor[LENGTH] = {0};
-    //     myXor(wmInt, wmRes, LENGTH, resXor);
-    //     std::cout << "Hamming distance: "<< count1(resXor,LENGTH) << std::endl;
-    //
-    //   }
       // print the execution time
       std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
@@ -132,4 +110,10 @@ int main(int argc, char** argv )
       destroyAllWindows();
 
       return 0;
+}
+
+Mat next_frame(VideoCapture vc, int frame_count_embed, int fps_ratio){
+  Mat frame = vc.read();
+  if (frame.empty())
+    return NULL;
 }
