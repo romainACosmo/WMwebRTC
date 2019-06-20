@@ -37,8 +37,8 @@ int main(int argc, char** argv )
 
   int nb_blk = (1280.0/32)*(720.0/32);
   int nb_replicate = nb_blk/LENGTH;
-  int wm_rep[nb_replicate*LENGTH];
-  int buffer[nb_replicate*LENGTH];
+  int wm_rep[nb_blk];
+  int buffer[nb_blk];
   for(int i = 0; i < nb_replicate; ++i){
     for (int j = 0; j < LENGTH; j++){
       wm_rep[i*LENGTH+j] = wmInt[j];
@@ -47,9 +47,9 @@ int main(int argc, char** argv )
   }
 
   // initialization of syncronization sequences
-  int synSeq0[nb_replicate*LENGTH];
-  int synSeq1[nb_replicate*LENGTH];
-  for (size_t i = 0; i < nb_replicate*LENGTH; i++){
+  int synSeq0[nb_blk];
+  int synSeq1[nb_blk];
+  for (size_t i = 0; i < nb_blk; i++){
     synSeq0[i] = 0;
     synSeq1[i] = 1;
   }
@@ -88,7 +88,7 @@ int main(int argc, char** argv )
         int * emb;
         switch ((frameCount/GOP)%3) {
           case 0:
-          // first frame of the sequence: embed 0 
+          // first frame of the sequence: embed 0
             // embed synSeq of 0s
             if(frameCount%GOP < 2)
               emb = &synSeq0[0];

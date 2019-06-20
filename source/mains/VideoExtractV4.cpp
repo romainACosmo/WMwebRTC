@@ -43,11 +43,17 @@ int main(int argc, char** argv )
     bool done = false;
     int wmRes[LENGTH] = {0};
 
+    // while (frameCount < 7) {
+    //   Mat frame;
+    //   cap >> frame;
+    //   ++frameCount;
+    // }
+
     while(!done){
-        double wmResA[LENGTH*nb_replicate];
-        double wmResB[LENGTH*nb_replicate];
-        memset(wmResA, 0.0, LENGTH*nb_replicate*sizeof(double));
-        memset(wmResB, 0.0, LENGTH*nb_replicate*sizeof(double));
+        double wmResA[nb_blk];
+        double wmResB[nb_blk];
+        memset(wmResA, 0.0, nb_blk*sizeof(double));
+        memset(wmResB, 0.0, nb_blk*sizeof(double));
 
         // Capture frame-by-frame
         Mat frame0, frame1, frame2;
@@ -62,8 +68,8 @@ int main(int argc, char** argv )
           }
           frameCount += 3;
 
-          exV4(frame0, i == 0 ? wmResA : wmResB, LENGTH*nb_replicate);
-          exV4(frame1, i == 0 ? wmResA : wmResB, LENGTH*nb_replicate);
+          exV4(frame0, i == 0 ? wmResA : wmResB, nb_blk);
+          exV4(frame1, i == 0 ? wmResA : wmResB, nb_blk);
         }
         // cout << "printing wm res for frames " << frameCount << endl;
 
