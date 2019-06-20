@@ -64,77 +64,94 @@ int main(int argc, char** argv )
 
 
     bool done = false, sync = false;
-
+    double tmp_res[nb_blk];
 
     while(!done){
 
       double wmResA[nb_blk];
       double wmResB[nb_blk];
 
-      // done = true;
-
+      int offset = frame_count_embed;
       while (!sync){ // change frame rate
         cout << "start sync " << endl;
 
+        // reset the frame index to the offset
+        cap.set(CAP_PROP_POS_FRAMES, offset);
+
+        // substract the sum of neutral frame from wmResA
+        for (size_t i = 0; i < nb_blk; i++){
+          if(frame_count_embed < offset+4)
+            wmResA[i] = -1*tmp_res[i];
+          tmp_res[i] = 0;
+        }
+
         Mat frame;
+        // extract values of the 2 firsts frames of the 1st GOP
         for (size_t i = 0; i < 2; i++) {
-           // cap.read(frame);
            frame = next_frame(cap, &frame_count_received, fps_ratio);
+           ++frame_count_embed;
           if (frame.empty())
             break;
           exV6(frame, wmResA, nb_blk);
-
         }
-        imshow("0", frame);
-        waitKey(0);
-        // cap.read(frame);
+
+        // read neutral frame of the first GOP
         frame = next_frame(cap, &frame_count_received, fps_ratio);
+        ++frame_count_embed;
         if (frame.empty())
           break;
+        exV6(frame, tmp_res, nb_blk);
 
+        // substract the sum of neutral frame from wmResA and wmResB
+        for (size_t i = 0; i < nb_blk; i++){
+          wmResA[i] -= (frame_count_embed < 4 ? 2 : 1)*tmp_res[i]; // works well ? use boolean as int (0 and 1)?
+          wmResB[i] = -1*tmp_res[i];
+          tmp_res[i] = 0;
+        }
 
+        // extract values of the 2 firsts frames of the 2nd GOP
         for (size_t i = 0; i < 2; i++) {
-          // cap.read(frame);
           frame = next_frame(cap, &frame_count_received, fps_ratio);
+          ++frame_count_embed;
           if (frame.empty())
             break;
           exV6(frame, wmResB, nb_blk);
 
         }
-        imshow("1", frame);
-        waitKey(0);
-        // cap.read(frame);
+
+        // read neutral frame of the second GOP
         frame = next_frame(cap, &frame_count_received, fps_ratio);
+        ++frame_count_embed;
         if (frame.empty())
           break;
+        exV6(frame, tmp_res, nb_blk);
 
-        // sync = true;
-        // printArray(prev_sync, nb_blk);
-        // cout << endl << endl;
         int sum_wm = 0;
         for(int i = 0; i < nb_blk; ++i){
+          // substract the sum of neutral frame from wmResB
+          wmResB[i] -= tmp_res[i];
+
+          // if the tendency is to decrease, 1 has been embedded, otherwise 0
           sum_wm += wmResA[i] > wmResB[i] ? 1 : 0;
-          // cout << (prev_sync[i] == 0 && wmResA[i] > wmResB[i]) << endl;
-          // sync = sync && prev_sync[i] == 0 && wmResA[i] > wmResB[i];
-          // prev_sync[i] = wmResA[i] > wmResB[i] ? 1 : 0;
         }
-        // 80% must be == 1 to be considered as the 1 block
-        if(sum_wm > nb_blk*0.75){
+
+        // 75% must be == 1 to be considered as the 1 block
+        if(sum_wm > nb_blk*0.8){
           if(prev_wm == 0)
-            sync = true;
+            sync = true; // syncSeq detected
           prev_wm = 1;
-        } else if (sum_wm < nb_blk*0.25) // same for 0
+        } else if (sum_wm < nb_blk*0.2) // same for 0
           prev_wm = 0;
         else
           prev_wm = -1;
 
+        cout << "sum: " << sum_wm << ", sync: " << sync << endl;
+        // try with window shifted of 1 frame
+        ++offset;
+      } // end sync loop
 
-        // printArray(prev_sync, nb_blk);
-        cout << "sum: " << sum_wm << ", nb_blk: " << nb_blk << ", sync: " << sync << endl;
-        // cap.set(CAP_PROP_POS_FRAMES, 0); // reset the frame index
-      }
 
-      }
+    } // end done loop
 
       // print the execution time
       std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();

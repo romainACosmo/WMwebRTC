@@ -7,7 +7,7 @@
 #include "../WM/wmV4.cpp"
 #include "../WM/studyDCT.cpp"
 
-#define LENGTH 256 // 16384
+#define LENGTH 128 //256 // 16384
 using namespace cv;
 using namespace std;
 
@@ -31,7 +31,7 @@ int main(int argc, char** argv )
   for (size_t i = 0; i < LENGTH; i++)
     buffer[i] = 1-wmInt[i];
 
-    VideoCapture cap("../../figures/outcpp.mkv");
+    VideoCapture cap("../../figures/outcppV6.avi");
     if(!cap.isOpened()){
       cout << "Error opening video stream or file" << endl;
       return -1;
@@ -80,8 +80,11 @@ int main(int argc, char** argv )
             tmp1 += wmResA[i+k*LENGTH];
             tmp2 += wmResB[i+k*LENGTH];
           }
-          wmRes[i] += tmp1 > tmp2 ? 1 : 0;
+          // cout << tmp1 << " - " << tmp2 << endl;
+          wmRes[i] = tmp1 > tmp2 ? 1 : 0;
         }
+        cout << endl;
+        printArray(wmRes, LENGTH);
 
         int resXor[LENGTH] = {0};
         // cout << endl;
@@ -92,7 +95,7 @@ int main(int argc, char** argv )
         // std::cout << endl << count1(resXor,LENGTH) << endl;
       }
       cout << endl;
-      printArray(wmRes, LENGTH);
+      // printArray(wmRes, LENGTH);
 
       for(int i = 0; i < LENGTH; ++i)
         wmRes[i] = wmRes[i] > 19 ? 1 : 0;

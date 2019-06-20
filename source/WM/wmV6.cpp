@@ -34,7 +34,7 @@ void wmV6(Mat input, int wm[], int wmLength, Mat output, double alpha)
   split(input, bgr);
 
   // convert the Y channel to be compatible with the opencv dct function input type
-  Mat bFloat, jnd;
+  Mat bFloat;
   bgr[0].convertTo(bFloat, CV_32FC1);
 
   int count = 0;
@@ -59,7 +59,8 @@ void wmV6(Mat input, int wm[], int wmLength, Mat output, double alpha)
         for (int y = 0; y < copyDCT.rows; y+=8){
           Mat blk = macro_blk(Rect(x, y, 8, 8)); // 8 as 1 coef computed for each 8x8 blk => only the DC coef
           double tmp = 1.4*pow(copyDCT.at<float>(x,y)/c, LUMASKEXPO);
-          blk += tmp*(2*wm[count]-1)*alpha/8;
+          blk += (2*wm[count]-1)*alpha/8;
+          // blk += tmp*(2*wm[count]-1)*alpha/8;
         }
       }
       ++count;
