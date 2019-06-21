@@ -13,9 +13,11 @@ using namespace cv;
 using namespace std;
 
 /**
-38 gop
+38 gop => 337 frames
 g++ $(pkg-config --cflags --libs opencv) -std=c++11  VideoExtractV4.cpp -o VideoExtractV5
 
+
+should find where overflow
 **/
 
 Mat next_frame(VideoCapture vc, double * tmp_count, double ratio);
@@ -32,7 +34,7 @@ int main(int argc, char** argv )
     buffer[i] = 1-wmInt[i];
 
     // VideoCapture cap("../../figures/captured.avi");
-    VideoCapture cap("../../figures/outcppV6.avi");
+    VideoCapture cap("../../figures/outcppV6_dammaged.avi");
     if(!cap.isOpened()){
       cout << "Error opening video stream or file" << endl;
       return -1;
@@ -43,8 +45,6 @@ int main(int argc, char** argv )
     double fps_ratio = fps/embedding_fps;
     double width = cap.get(CAP_PROP_FRAME_WIDTH);
     double height = cap.get(CAP_PROP_FRAME_HEIGHT);
-
-    cout << fps << endl;
 
     // initialization of syncronization sequences
     int nb_blk = (width/32)*(height/32);
@@ -62,102 +62,105 @@ int main(int argc, char** argv )
     int frame_count_embed = 0, prev_wm = -1;
     double frame_count_received = 0.0; // reset to % ratio every read
 
-
     bool done = false, sync = false;
-    double tmp_res[nb_blk];
+    int wm_final[LENGTH];
+    for (size_t i = 0; i < LENGTH; i++) {
+      wm_final[i] = 0;
+    }
+
+    double last_neutral[nb_blk];
+    for (size_t i = 0; i < nb_blk; i++) {
+      last_neutral[i] = -1;
+    }
 
     while(!done){
-
-      double wmResA[nb_blk];
-      double wmResB[nb_blk];
+      double wm[nb_blk];
 
       int offset = frame_count_embed;
-      while (!sync){ // change frame rate
-        cout << "start sync " << endl;
+      while (!sync){
 
-        // reset the frame index to the offset
-        cap.set(CAP_PROP_POS_FRAMES, offset);
+        cout << "start sync, count: " << frame_count_embed << " offset: " << offset << endl;
 
-        // substract the sum of neutral frame from wmResA
-        for (size_t i = 0; i < nb_blk; i++){
-          if(frame_count_embed < offset+4)
-            wmResA[i] = -1*tmp_res[i];
-          tmp_res[i] = 0;
-        }
-
-        Mat frame;
-        // extract values of the 2 firsts frames of the 1st GOP
-        for (size_t i = 0; i < 2; i++) {
-           frame = next_frame(cap, &frame_count_received, fps_ratio);
-           ++frame_count_embed;
-          if (frame.empty())
-            break;
-          exV6(frame, wmResA, nb_blk);
-        }
-
-        // read neutral frame of the first GOP
-        frame = next_frame(cap, &frame_count_received, fps_ratio);
-        ++frame_count_embed;
-        if (frame.empty())
-          break;
-        exV6(frame, tmp_res, nb_blk);
-
-        // substract the sum of neutral frame from wmResA and wmResB
-        for (size_t i = 0; i < nb_blk; i++){
-          wmResA[i] -= (frame_count_embed < 4 ? 2 : 1)*tmp_res[i]; // works well ? use boolean as int (0 and 1)?
-          wmResB[i] = -1*tmp_res[i];
-          tmp_res[i] = 0;
-        }
-
-        // extract values of the 2 firsts frames of the 2nd GOP
-        for (size_t i = 0; i < 2; i++) {
-          frame = next_frame(cap, &frame_count_received, fps_ratio);
+        // read the 6 next frames
+        Mat frames[6];
+        for (size_t i = 0; i < 6; i++) {
+          frames[i] = next_frame(cap, &frame_count_received, fps_ratio);
           ++frame_count_embed;
-          if (frame.empty())
+          if (frames[i].empty()){
+            sync = true;
+            done = true;
             break;
-          exV6(frame, wmResB, nb_blk);
-
+          }
         }
 
-        // read neutral frame of the second GOP
-        frame = next_frame(cap, &frame_count_received, fps_ratio);
-        ++frame_count_embed;
-        if (frame.empty())
-          break;
-        exV6(frame, tmp_res, nb_blk);
+        // if not EOF extract the potential WM
+        if(!done){
+          extractFull(frames, last_neutral, nb_blk, wm);
 
-        int sum_wm = 0;
-        for(int i = 0; i < nb_blk; ++i){
-          // substract the sum of neutral frame from wmResB
-          wmResB[i] -= tmp_res[i];
+          int sum_wm = 0;
+          for (size_t i = 0; i < nb_blk; i++)
+            sum_wm += wm[i];
 
-          // if the tendency is to decrease, 1 has been embedded, otherwise 0
-          sum_wm += wmResA[i] > wmResB[i] ? 1 : 0;
+          // 75% must be == 1 to be considered as the 1 block
+          if(sum_wm > nb_blk*0.8 && prev_wm == 0)
+              sync = true; // syncSeq detected
+          else if (sum_wm < nb_blk*0.2) // same for 0
+            prev_wm = 0;
+          else {
+            // try with window shifted of 1 frame
+            ++offset;
+            cap.set(CAP_PROP_POS_FRAMES, offset);
+          }
+
+          cout << "sum: " << sum_wm << ", sync: " << sync << endl;
         }
-
-        // 75% must be == 1 to be considered as the 1 block
-        if(sum_wm > nb_blk*0.8){
-          if(prev_wm == 0)
-            sync = true; // syncSeq detected
-          prev_wm = 1;
-        } else if (sum_wm < nb_blk*0.2) // same for 0
-          prev_wm = 0;
-        else
-          prev_wm = -1;
-
-        cout << "sum: " << sum_wm << ", sync: " << sync << endl;
-        // try with window shifted of 1 frame
-        ++offset;
       } // end sync loop
 
 
+      // read the 6 next frames
+      Mat frames[6];
+      for (size_t i = 0; i < 6; i++) {
+        frames[i] = next_frame(cap, &frame_count_received, fps_ratio);
+        ++frame_count_embed;
+        if (frames[i].empty()){
+          done = true;
+          break;
+        }
+      }
+
+      // if not EOF extract the potential WM
+      if(!done){
+        extractFull(frames, last_neutral, nb_blk, wm);
+        int wm_tmp[LENGTH] = {0};
+        for(int i = 0; i < LENGTH; ++i){
+          for (int k = 0; k < nb_replicate; k++)
+            wm_tmp[i] += wm[i+k*LENGTH];
+          wm_tmp[i] = wm_tmp[i] > nb_replicate/2.0 ? 1 : 0;
+          wm_final[i] += wm_tmp[i];
+        }
+
+        printArray(wm_tmp, LENGTH);
+        int resXor[LENGTH] = {0};
+        myXor(wmInt, wm_tmp, LENGTH, resXor);
+        cout << "Hamming distance = " << count1(resXor,LENGTH) << endl;
+
+        sync = false;
+      }
     } // end done loop
+
+    printArray(wm_final, LENGTH);
+    for(int i = 0; i < LENGTH; ++i){
+      wm_final[i] = wm_final[i] > 4 ? 1 : 0;
+    }
+
+    int resXorFinal[LENGTH] = {0};
+    myXor(wmInt, wm_final, LENGTH, resXorFinal);
+    cout << "count final: " << frame_count_embed << endl << "Total Hamming distance = " << count1(resXorFinal,LENGTH) << endl;
 
       // print the execution time
       std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
       std::cout << "Total time: " << time_span.count() << " seconds" << std::endl;
-      // std::cout << "Number of frames: " << frameCount << std::endl;
 
       // When everything done, release the video capture object
       cap.release();
@@ -168,17 +171,17 @@ int main(int argc, char** argv )
 }
 
 Mat next_frame(VideoCapture vc, double * tmp_count, double ratio){
-  Mat frame;
+  Mat frame, empty;
   Mat tmp_frame = Mat::zeros(Size(vc.get(CAP_PROP_FRAME_WIDTH), vc.get(CAP_PROP_FRAME_HEIGHT)), CV_8UC3);
   int count = 0;
   do{
     vc.read(frame);
+    if(frame.empty())
+      return empty;
     tmp_frame += frame;
     ++(*tmp_count);
     ++count;
-    // cout << *tmp_count << endl;
   } while(*tmp_count < ratio && !frame.empty());
-  cout << "nb_frame avrged: " << count << endl;
   tmp_frame /= count;
   *tmp_count -= ratio;
   return tmp_frame;

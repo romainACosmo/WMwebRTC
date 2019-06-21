@@ -117,3 +117,48 @@ void exV6(Mat input, double wm[], int len){
   chrono::duration<double> time_span = chrono::duration_cast<chrono::duration<double>>(t2 - t1);
   // cout << time_span.count() << ",";
 }
+
+void extractFull(Mat input_frames[6], double last_neutral[], int size_wm, double output[]){ // !!! if first give last == -1
+
+  double wmResA[size_wm];
+  double wmResB[size_wm];
+  bool first = true;
+
+  // substract the sum of neutral frame from wmResA
+  for (size_t i = 0; i < size_wm; i++){
+    if(last_neutral[i] > 0){
+      first = false;
+      wmResA[i] = -1*last_neutral[i];
+    }
+    last_neutral[i] = 0;
+  }
+
+  // extract values of the 2 first frames of the 1st part of the GOP
+  exV6(input_frames[0], wmResA, size_wm);
+  exV6(input_frames[1], wmResA, size_wm);
+
+  // read neutral frame of the first GOP
+  exV6(input_frames[2], last_neutral, size_wm);
+
+  // substract the sum of neutral frame from wmResA and wmResB
+  for (size_t i = 0; i < size_wm; i++){
+    wmResA[i] -= (first ? 2 : 1)*last_neutral[i]; // works well ? use boolean as int (0 and 1)?
+    wmResB[i] = -1*last_neutral[i];
+    last_neutral[i] = 0;
+  }
+
+  // extract values of the 2 first frames of the 2nd part of the GOP
+  exV6(input_frames[3], wmResB, size_wm);
+  exV6(input_frames[4], wmResB, size_wm);
+
+  // read neutral frame of the second GOP
+  exV6(input_frames[5], last_neutral, size_wm);
+
+  for(int i = 0; i < size_wm; ++i){
+    // substract the sum of neutral frame from wmResB
+    wmResB[i] -= last_neutral[i];
+
+    // if the tendency is to decrease, 1 has been embedded, otherwise 0
+    output[i] = wmResA[i] > wmResB[i] ? 1 : 0;
+  }
+}
