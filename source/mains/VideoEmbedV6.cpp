@@ -55,9 +55,12 @@ int main(int argc, char** argv )
   }
 
     // initialize the video reader and writer
-    VideoCapture cap("../../SampleVideo_1280x720_2mb.mp4");
+    VideoCapture cap("../../original.mp4");
+    // VideoCapture cap("../../figures/preprocessed.mp4");
     double fps = cap.get(CAP_PROP_FPS);
-    VideoWriter video("../../figures/outcppV6.avi", VideoWriter::fourcc('M','J','P','G'), fps, Size(1280,720));
+    int width = cap.get(CAP_PROP_FRAME_WIDTH);
+    int height = cap.get(CAP_PROP_FRAME_HEIGHT);
+    VideoWriter video("../../figures/outcppV6.mp4", cap.get(CAP_PROP_FOURCC), fps, Size(width,height));
     // VideoWriter video("../../figures/outcpp.avi", -1 , fps, Size(1280,720));
     if(!cap.isOpened()){
       cout << "Error opening video stream or file" << endl;

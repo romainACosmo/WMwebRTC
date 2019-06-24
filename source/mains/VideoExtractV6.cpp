@@ -33,21 +33,32 @@ int main(int argc, char** argv )
   for (size_t i = 0; i < LENGTH; i++)
     buffer[i] = 1-wmInt[i];
 
+    // VideoCapture cap("../../figures/captured_150.avi");
     // VideoCapture cap("../../figures/captured.avi");
-    VideoCapture cap("../../figures/outcppV6_dammaged.avi");
+    // VideoCapture cap("../../figures/outcppV6.mp4");
+    VideoCapture cap("../../figures/preprocessed.mp4");
     if(!cap.isOpened()){
       cout << "Error opening video stream or file" << endl;
       return -1;
     }
 
-    double fps = cap.get(CAP_PROP_FPS);
     double embedding_fps = 25;
-    double fps_ratio = fps/embedding_fps;
+    double embedding_width_ratio = 32.0/1280;
+    double embedding_height_ratio = 32.0/720;
+
+    double fps = cap.get(CAP_PROP_FPS);
     double width = cap.get(CAP_PROP_FRAME_WIDTH);
     double height = cap.get(CAP_PROP_FRAME_HEIGHT);
+    int blk_width = embedding_width_ratio*width;
+    int blk_height = embedding_height_ratio*height;
+
+    double fps_ratio = fps/embedding_fps;
+
+    cout << "Size: " << width << " x " << height << endl;
+    cout << "Block Size: " << blk_width << " x " << blk_height << endl;
 
     // initialization of syncronization sequences
-    int nb_blk = (width/32)*(height/32);
+    int nb_blk = (width/blk_width)*(height/blk_height);
     int nb_replicate = nb_blk/LENGTH;
     int synSeq0[nb_blk];
     int synSeq1[nb_blk];
@@ -95,7 +106,7 @@ int main(int argc, char** argv )
 
         // if not EOF extract the potential WM
         if(!done){
-          extractFull(frames, last_neutral, nb_blk, wm);
+          extractFull(frames, last_neutral, nb_blk, blk_width, blk_height, wm);
 
           int sum_wm = 0;
           for (size_t i = 0; i < nb_blk; i++)
@@ -108,6 +119,7 @@ int main(int argc, char** argv )
             prev_wm = 0;
           else {
             // try with window shifted of 1 frame
+            prev_wm = -1;
             ++offset;
             cap.set(CAP_PROP_POS_FRAMES, offset);
           }
@@ -130,7 +142,7 @@ int main(int argc, char** argv )
 
       // if not EOF extract the potential WM
       if(!done){
-        extractFull(frames, last_neutral, nb_blk, wm);
+        extractFull(frames, last_neutral, nb_blk, blk_width, blk_height, wm);
         int wm_tmp[LENGTH] = {0};
         for(int i = 0; i < LENGTH; ++i){
           for (int k = 0; k < nb_replicate; k++)
@@ -150,7 +162,7 @@ int main(int argc, char** argv )
 
     printArray(wm_final, LENGTH);
     for(int i = 0; i < LENGTH; ++i){
-      wm_final[i] = wm_final[i] > 4 ? 1 : 0;
+      wm_final[i] = wm_final[i] > 2 ? 1 : 0;
     }
 
     int resXorFinal[LENGTH] = {0};

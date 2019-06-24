@@ -43,26 +43,28 @@ void wmV6(Mat input, int wm[], int wmLength, Mat output, double alpha)
     for (int j = 0; j < bFloat.rows - 31 && count < wmLength; j += 32){
       // cout << i << " - " << j << "=>" << count << endl;
       Mat macro_blk = bFloat(Rect(i, j, 32, 32));
-      Mat copyDCT = macro_blk.clone();
-      double c = 0;
+      macro_blk += (2*wm[count]-1)*alpha/8;
 
-      for (int x = 0; x < copyDCT.cols; x += 8){
-        for (int y = 0; y < copyDCT.rows; y += 8){
-          Mat blk = copyDCT(Rect(x, y, 8, 8));
-          dct(blk, blk);
-          c += blk.at<float>(0,0);
-        }
-      }
-      c /= 16;
-
-      for (int x = 0; x < copyDCT.cols; x+=8){
-        for (int y = 0; y < copyDCT.rows; y+=8){
-          Mat blk = macro_blk(Rect(x, y, 8, 8)); // 8 as 1 coef computed for each 8x8 blk => only the DC coef
-          double tmp = 1.4*pow(copyDCT.at<float>(x,y)/c, LUMASKEXPO);
-          blk += (2*wm[count]-1)*alpha/8;
-          // blk += tmp*(2*wm[count]-1)*alpha/8;
-        }
-      }
+      // Mat copyDCT = macro_blk.clone();
+      // double c = 0;
+      //
+      // for (int x = 0; x < copyDCT.cols; x += 8){
+      //   for (int y = 0; y < copyDCT.rows; y += 8){
+      //     Mat blk = copyDCT(Rect(x, y, 8, 8));
+      //     dct(blk, blk);
+      //     c += blk.at<float>(0,0);
+      //   }
+      // }
+      // c /= 16;
+      //
+      // for (int x = 0; x < copyDCT.cols; x+=8){
+      //   for (int y = 0; y < copyDCT.rows; y+=8){
+      //     Mat blk = macro_blk(Rect(x, y, 8, 8)); // 8 as 1 coef computed for each 8x8 blk => only the DC coef
+      //     double tmp = 1.4*pow(copyDCT.at<float>(x,y)/c, LUMASKEXPO);
+      //     blk += (2*wm[count]-1)*alpha/8;
+      //     // blk += tmp*(2*wm[count]-1)*alpha/8;
+      //   }
+      // }
       ++count;
     }
   }
@@ -86,7 +88,7 @@ void wmV6(Mat input, int wm[], int wmLength, Mat output, double alpha)
 }
 
 
-void exV6(Mat input, double wm[], int len){
+void exV6(Mat input, double wm[], int len, int blk_width, int blk_height){
 
   // start the timer
   chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
@@ -101,13 +103,13 @@ void exV6(Mat input, double wm[], int len){
   bgr[0].convertTo(bFloat, CV_32FC1);
   int count = 0;
 
-  for (int i = 0; i < bFloat.cols - 31; i += 32){
-    for (int j = 0; j < bFloat.rows - 31 &&  count < len; j += 32){
+  for (int i = 0; i < bFloat.cols - blk_width + 1; i += blk_width){
+    for (int j = 0; j < bFloat.rows - blk_height + 1 &&  count < len; j += blk_height){
       // Mat macro_blk = bFloat(Rect(i+8, j+8, 16, 16));
-      Mat macro_blk = bFloat(Rect(i+8, j+8, 16, 16));
+      Mat macro_blk = bFloat(Rect(i+blk_width/4, j+blk_height/4, blk_width/2, blk_height/2));
       // double tmp = cv::sum(blk)[0];
 
-      wm[count] += cv::sum(macro_blk)[0]/(16*16);
+      wm[count] += cv::sum(macro_blk)[0]/(blk_width*blk_height/(2*2));
       ++count;
     }
   }
@@ -118,7 +120,7 @@ void exV6(Mat input, double wm[], int len){
   // cout << time_span.count() << ",";
 }
 
-void extractFull(Mat input_frames[6], double last_neutral[], int size_wm, double output[]){ // !!! if first give last == -1
+void extractFull(Mat input_frames[6], double last_neutral[], int size_wm, int blk_width, int blk_height, double output[]){ // !!! if first give last == -1
 
   double wmResA[size_wm];
   double wmResB[size_wm];
@@ -134,11 +136,11 @@ void extractFull(Mat input_frames[6], double last_neutral[], int size_wm, double
   }
 
   // extract values of the 2 first frames of the 1st part of the GOP
-  exV6(input_frames[0], wmResA, size_wm);
-  exV6(input_frames[1], wmResA, size_wm);
+  exV6(input_frames[0], wmResA, size_wm, blk_width, blk_height);
+  exV6(input_frames[1], wmResA, size_wm, blk_width, blk_height);
 
   // read neutral frame of the first GOP
-  exV6(input_frames[2], last_neutral, size_wm);
+  exV6(input_frames[2], last_neutral, size_wm, blk_width, blk_height);
 
   // substract the sum of neutral frame from wmResA and wmResB
   for (size_t i = 0; i < size_wm; i++){
@@ -148,11 +150,11 @@ void extractFull(Mat input_frames[6], double last_neutral[], int size_wm, double
   }
 
   // extract values of the 2 first frames of the 2nd part of the GOP
-  exV6(input_frames[3], wmResB, size_wm);
-  exV6(input_frames[4], wmResB, size_wm);
+  exV6(input_frames[3], wmResB, size_wm, blk_width, blk_height);
+  exV6(input_frames[4], wmResB, size_wm, blk_width, blk_height);
 
   // read neutral frame of the second GOP
-  exV6(input_frames[5], last_neutral, size_wm);
+  exV6(input_frames[5], last_neutral, size_wm, blk_width, blk_height);
 
   for(int i = 0; i < size_wm; ++i){
     // substract the sum of neutral frame from wmResB
