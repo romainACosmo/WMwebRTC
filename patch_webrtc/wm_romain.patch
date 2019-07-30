@@ -1,0 +1,135 @@
+diff --git a/modules/video_coding/video_coding_impl.h b/modules/video_coding/video_coding_impl.h
+index 87fc5f6c42..fc907d579c 100644
+--- a/modules/video_coding/video_coding_impl.h
++++ b/modules/video_coding/video_coding_impl.h
+@@ -79,7 +79,8 @@ class VideoSender {
+ 
+   int32_t AddVideoFrame(const VideoFrame& videoFrame,
+                         const CodecSpecificInfo* codecSpecificInfo,
+-                        absl::optional<VideoEncoder::EncoderInfo> encoder_info);
++                        absl::optional<VideoEncoder::EncoderInfo> encoder_info,
++                        int frameNumber);
+ 
+   int32_t IntraFrameRequest(size_t stream_index);
+ 
+diff --git a/modules/video_coding/video_sender.cc b/modules/video_coding/video_sender.cc
+index 78196ab4c4..bcf128e8c5 100644
+--- a/modules/video_coding/video_sender.cc
++++ b/modules/video_coding/video_sender.cc
+@@ -10,6 +10,7 @@
+ 
+ #include <stddef.h>
+ #include <stdint.h>
++#include <chrono>
+ #include <vector>
+ 
+ #include "api/video/video_bitrate_allocation.h"
+@@ -38,6 +39,17 @@
+ namespace webrtc {
+ namespace vcm {
+ 
++  // BEGIN ARTRUROMAIN length == 128
++  const int wm[] = {
++    0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
++    0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0,
++    1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1,
++    0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1,
++    0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1,
++    0, 0, 1};
++  // END ROMAIN
++
++
+ VideoSender::VideoSender(Clock* clock,
+                          EncodedImageCallback* post_encode_callback)
+     : _encoder(nullptr),
+@@ -163,7 +175,8 @@ int32_t VideoSender::SetChannelParameters(
+ int32_t VideoSender::AddVideoFrame(
+     const VideoFrame& videoFrame,
+     const CodecSpecificInfo* codecSpecificInfo,
+-    absl::optional<VideoEncoder::EncoderInfo> encoder_info) {
++    absl::optional<VideoEncoder::EncoderInfo> encoder_info,
++  int frameNumber) {
+   std::vector<FrameType> next_frame_types;
+   bool encoder_has_internal_source = false;
+   {
+@@ -199,6 +212,54 @@ int32_t VideoSender::AddVideoFrame(
+       RTC_LOG(LS_ERROR) << "Frame conversion failed, dropping frame.";
+       return VCM_PARAMETER_ERROR;
+     }
++
++    // BEGIN ROMAINARTRU
++    // auto start = std::chrono::system_clock::now();
++    int wm_tmp[128];
++    // RTC_LOG(LS_INFO) << "ROMAINARTRU - starting frame with: " << frameNumber << " => " << (frameNumber/6)%3;
++
++    switch ((frameNumber/6)%3) { // 6 = GOP, 3 because embed seq0, seq1, wm and repeat
++      case 0:
++        std::fill_n(wm_tmp, 128, 0);
++        break;
++      case 1:
++        std::fill_n(wm_tmp, 128, 1);
++        break;
++      default:
++        for (size_t i = 0; i < 128; i++)
++          wm_tmp[i] = wm[i];
++        break;
++    }
++
++    if(frameNumber % 3 != 2){
++      int blk_width = int(converted_frame.width()/23);
++      int blk_height = int(converted_frame.height()/17);
++      int modif_sign = frameNumber % 6 < 2 ? 1 : -1;
++      int modification;
++      int index_shift;
++      for (int j=0; j<converted_frame.height()-blk_height+1; j+=blk_height){
++        for (int i=0; i<converted_frame.width()-blk_width+1; i+=blk_width){
++          modification = modif_sign*(2*wm_tmp[((j/blk_height)*(converted_frame.width()/blk_width)+i/blk_width)%128]-1); // embed in positive
++          for (int k = 0; k < blk_height; k++) {
++            index_shift = (j+k)*converted_buffer->StrideY()+i;
++            for (int l = 0; l < blk_width; l++) {
++              int tmp = *(converted_buffer->DataY()+index_shift+l) + 2*modification; // weight
++              uint8_t new_val = tmp < 0 ? 0 : (tmp > 255 ? 255 : tmp);
++              uint8_t* d = (uint8_t*)converted_buffer->DataY()+index_shift+l;
++              const uint8_t *s = &new_val;
++              *d = *s;
++            }
++          }
++        }
++      }
++    }
++
++    // std::chrono::duration<double> diff = std::chrono::system_clock::now()-start;
++    //
++    RTC_LOG(LS_INFO) << "ROMAINARTRU - end frame ";// << diff.count();
++
++    // END ROMAINARTRU
++
+     converted_frame = VideoFrame::Builder()
+                           .set_video_frame_buffer(converted_buffer)
+                           .set_timestamp_rtp(converted_frame.timestamp())
+diff --git a/modules/video_coding/video_sender_unittest.cc b/modules/video_coding/video_sender_unittest.cc
+index 11a69be137..541bb50179 100644
+--- a/modules/video_coding/video_sender_unittest.cc
++++ b/modules/video_coding/video_sender_unittest.cc
+@@ -194,7 +194,7 @@ class TestVideoSender : public ::testing::Test {
+     sender_->AddVideoFrame(*generator_->NextFrame(), nullptr,
+                            encoder_ ? absl::optional<VideoEncoder::EncoderInfo>(
+                                           encoder_->GetEncoderInfo())
+-                                    : absl::nullopt);
++                                    : absl::nullopt, 2);
+   }
+ 
+   SimulatedClock clock_;
+diff --git a/video/video_stream_encoder.cc b/video/video_stream_encoder.cc
+index 8a1a4afa09..f7229f7e8f 100644
+--- a/video/video_stream_encoder.cc
++++ b/video/video_stream_encoder.cc
+@@ -1018,7 +1018,7 @@ void VideoStreamEncoder::EncodeVideoFrame(const VideoFrame& video_frame,
+   }
+ 
+   encoder_info_ = info;
+-  video_sender_.AddVideoFrame(out_frame, nullptr, encoder_info_);
++  video_sender_.AddVideoFrame(out_frame, nullptr, encoder_info_, captured_frame_count_-dropped_frame_count_);
+ }
+ 
+ void VideoStreamEncoder::SendKeyFrame() {
