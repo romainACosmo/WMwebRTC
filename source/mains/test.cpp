@@ -8,6 +8,8 @@
 #include "../WM/studyDCT.cpp"
 #define LENGTH 512
 
+using namespace std;
+
 // g++ $(pkg-config --cflags --libs opencv) -std=c++11  test.cpp -o test
 
 int main(int argc, char** argv )
@@ -25,27 +27,44 @@ int main(int argc, char** argv )
 
   const char wmStr2[] = "00110010001111000000100000011111100011111011000000110011111100010001101000101110000100000101110101010001000000010101100101111100100111100001001100100101111111100000000101001001111100101000000110001000000101010010001101101001110111000011110111101011011011111000111110010011100011110001011000001101011101110110100101101101011010011000110010001110110110001111001101011010000101101111011101100010011011110101010101001111111111011010101101011100111100000110011110000001101101101110010100100001010001000000001010001110";
 
-  VideoCapture cap("../../figures/outcppV6.avi");
-  double fps = cap.get(CAP_PROP_FPS);
-  VideoWriter video("../../figures/outcppV6_dammaged.avi", VideoWriter::fourcc('M','J','P','G'), fps, Size(1280,720));
+  unsigned char tmp1 = 0x6A;
+  int tmp2 = 22;
+  cout << tmp1 << endl; // j
+  cout << int(tmp1) << endl; // 106
+  cout << tmp2 << endl; // 45
+  cout << (unsigned char)(tmp2) << endl; // j
+  cout << tmp1+tmp2 << endl; // 151
+  cout << int(tmp1+tmp2) << endl; // 151
+  cout << static_cast<unsigned char>(tmp1+tmp2) << endl; // ?
+  cout << (unsigned char)(tmp1+tmp2) << endl; // ?
+  unsigned char tmp3 = tmp2;
+  unsigned char tmp4 = tmp1+tmp2;
+  cout << tmp3 << endl; // -
+  cout << tmp4 << endl; // ?
 
-  Mat frame;
-  int copied = 0;
-  do {
-    cap >> frame;
-    while(copied < 35){
-      video.write(frame);
-      ++copied;
-    }
-    video.write(frame);
-  } while(!frame.empty());
 
-  // When everything done, release the video capture object
-  cap.release();
-  video.release();
 
-  // Closes all the frames
-  destroyAllWindows();
+  // VideoCapture cap("../../figures/outcppV6.avi");
+  // double fps = cap.get(CAP_PROP_FPS);
+  // VideoWriter video("../../figures/outcppV6_dammaged.avi", VideoWriter::fourcc('M','J','P','G'), fps, Size(1280,720));
+
+  // Mat frame;
+  // int copied = 0;
+  // do {
+  //   cap >> frame;
+  //   while(copied < 35){
+  //     video.write(frame);
+  //     ++copied;
+  //   }
+  //   video.write(frame);
+  // } while(!frame.empty());
+  //
+  // // When everything done, release the video capture object
+  // cap.release();
+  // video.release();
+  //
+  // // Closes all the frames
+  // destroyAllWindows();
 
   return 0;
 }

@@ -14,7 +14,7 @@ using namespace std;
 
 /**
 38 gop => 337 frames
-g++ $(pkg-config --cflags --libs opencv) -std=c++11  VideoExtractV4.cpp -o VideoExtractV5
+g++ $(pkg-config --cflags --libs opencv) -std=c++11  VideoExtractV6.cpp -o VideoExtractV6
 
 
 should find where overflow
@@ -35,8 +35,8 @@ int main(int argc, char** argv )
 
     // VideoCapture cap("../../figures/captured_150.avi");
     // VideoCapture cap("../../figures/captured.avi");
-    // VideoCapture cap("../../figures/outcppV6.mp4");
-    VideoCapture cap("../../figures/preprocessed.mp4");
+    VideoCapture cap("../../figures/outcppV6_vp8.avi");
+    // VideoCapture cap("../../figures/preprocessed.mp4");
     if(!cap.isOpened()){
       cout << "Error opening video stream or file" << endl;
       return -1;

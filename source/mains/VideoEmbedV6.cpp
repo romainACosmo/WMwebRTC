@@ -12,6 +12,7 @@ using namespace std;
 
 g++ $(pkg-config --cflags --libs opencv) -std=c++11  VideoEmbedV6.cpp -o VideoEmbedV6
 
+-
 Compatibility:
 avi - mjpg => best quality
 mkv - x264
@@ -55,12 +56,12 @@ int main(int argc, char** argv )
   }
 
     // initialize the video reader and writer
-    VideoCapture cap("../../original.mp4");
+    VideoCapture cap("../../original_av1.mkv");
     // VideoCapture cap("../../figures/preprocessed.mp4");
     double fps = cap.get(CAP_PROP_FPS);
     int width = cap.get(CAP_PROP_FRAME_WIDTH);
     int height = cap.get(CAP_PROP_FRAME_HEIGHT);
-    VideoWriter video("../../figures/outcppV6.mp4", cap.get(CAP_PROP_FOURCC), fps, Size(width,height));
+    VideoWriter video("../../figures/outcppV6_av1.mkv", cap.get(CAP_PROP_FOURCC), fps, Size(width,height));
     // VideoWriter video("../../figures/outcpp.avi", -1 , fps, Size(1280,720));
     if(!cap.isOpened()){
       cout << "Error opening video stream or file" << endl;
@@ -124,8 +125,8 @@ int main(int argc, char** argv )
       // print the execution time
       std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
-      std::cout << "Total time: " << time_span.count() << " seconds" << std::endl;
-      std::cout << "Number of frames: " << frameCount << std::endl;
+      // std::cout << "Total time: " << time_span.count() << " seconds" << std::endl;
+      // std::cout << "Number of frames: " << frameCount << std::endl;
 
       // When everything done, release the video capture object
       cap.release();

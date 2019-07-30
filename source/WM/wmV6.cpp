@@ -103,12 +103,14 @@ void exV6(Mat input, double wm[], int len, int blk_width, int blk_height){
   bgr[0].convertTo(bFloat, CV_32FC1);
   int count = 0;
 
-  for (int i = 0; i < bFloat.cols - blk_width + 1; i += blk_width){
-    for (int j = 0; j < bFloat.rows - blk_height + 1 &&  count < len; j += blk_height){
+  for (int j = 0; j < bFloat.rows - blk_height + 1 &&  count < len; j += blk_height){
+    for (int i = 0; i < bFloat.cols - blk_width + 1; i += blk_width){
+
       // Mat macro_blk = bFloat(Rect(i+8, j+8, 16, 16));
       Mat macro_blk = bFloat(Rect(i+blk_width/4, j+blk_height/4, blk_width/2, blk_height/2));
       // double tmp = cv::sum(blk)[0];
 
+      // mean color over central rect of size (blk_width/2)*(blk_height/2)
       wm[count] += cv::sum(macro_blk)[0]/(blk_width*blk_height/(2*2));
       ++count;
     }
@@ -141,6 +143,7 @@ void extractFull(Mat input_frames[6], double last_neutral[], int size_wm, int bl
 
   // read neutral frame of the first GOP
   exV6(input_frames[2], last_neutral, size_wm, blk_width, blk_height);
+  // exV6(input_frames[2], wmResA, size_wm, blk_width, blk_height);
 
   // substract the sum of neutral frame from wmResA and wmResB
   for (size_t i = 0; i < size_wm; i++){
@@ -155,6 +158,8 @@ void extractFull(Mat input_frames[6], double last_neutral[], int size_wm, int bl
 
   // read neutral frame of the second GOP
   exV6(input_frames[5], last_neutral, size_wm, blk_width, blk_height);
+  // exV6(input_frames[5], wmResB, size_wm, blk_width, blk_height);
+
 
   for(int i = 0; i < size_wm; ++i){
     // substract the sum of neutral frame from wmResB
